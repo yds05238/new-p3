@@ -6,7 +6,7 @@ app = Flask(__name__)
 posts = {
     0: {
         "id": 0,
-        "upvotes": 1,
+        "upvotes": 8,
         "title": "My dog with 2 balls in his mouth",
         "link": "https://imgur.com/gallery/im-18-624-points-from-glorious-so-heres-picture-of-dog-with-two-his-mouth-XgbZdeA",
         "username": "user98",
@@ -46,6 +46,40 @@ def get_all_posts():
         posts_list.append(post_data)
 
     return jsonify({"posts": posts_list}), 200
+
+
+def sort_value_post(post):
+    return post["upvotes"]
+
+
+@app.route("/api/posts/ordered", methods=["GET"])
+def get_all_posts_ordered():
+    # Return list of all posts present (ordered)
+
+    # here we want to get the value of user (i.e. ?user=some-value)
+    ordering = request.args.get("ordering", "dec")  # default ordering: dec
+    # check for ordering parameter
+    parameter_list = ["dec", "inc"]
+    if ordering not in parameter_list:
+        return jsonify({"error": "Invalid ordering parameter"}), 400
+    # get all posts
+    post_list = list(posts.values())
+
+    if ordering == "dec":
+        post_list.sort(key=sort_value_post, reverse=True)
+    else:
+        post_list.sort(key=sort_value_post)
+
+    # return
+    return jsonify(post_list), 200
+
+    # post_list = list(posts.values())
+    # if ordering == "dec":
+    #     post_list.sort(key=lambda p: (-p["upvotes"], p["id"]))
+    # else:
+    #     post_list.sort(key=lambda p: (p["upvotes"], p["id"]))
+
+    # return jsonify({"posts": post_list}), 200
 
 
 @app.route("/api/posts/", methods=["POST"])
@@ -203,7 +237,38 @@ def create_comment(id):
 @app.route("/api/posts/<int:pid>/comments/<int:cid>/", methods=["POST"])
 def edit_comment(pid, cid):
     # Edit a specific comment on a specific post
-    pass
+    if pid not in posts:
+        return jsonify({"error": "Post not found"}), 404
+    if cid not in comments:
+        return jsonify({"error": "Comment not found"}), 404
+
+    # check request body (text)
+    data = request.json  # {"text": "fjdklasfj;kladsjlsfd"}
+
+    field_list = ["text"]
+    if not all(key in data for key in field_list):
+        return jsonify({"error": "Missing fields in request"}), 400
+
+    # get the old comment
+    existing_comment = comments[cid]
+    # check that comment is for post pid
+    if existing_comment["post_id"] != pid:
+        return jsonify({"error": "Comment not for this post"}), 400
+
+    # update the text field
+    existing_comment["text"] = data["text"]  # updated existing comment's text field
+
+    # save updated comment
+    comments[cid] = existing_comment
+
+    # filtered comment data for returned response
+    comment_data = {
+        "id": existing_comment["id"],
+        "upvotes": existing_comment["upvotes"],
+        "text": existing_comment["text"],
+        "username": existing_comment["username"],
+    }
+    return jsonify(comment_data), 200
 
 
 if __name__ == "__main__":
