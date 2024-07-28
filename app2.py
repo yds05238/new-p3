@@ -54,6 +54,24 @@ def get_all_posts():
     return jsonify({"posts": list(posts.values())}), 200
 
 
+@posts_bp.route("/posts/sorted", methods=["GET"])
+def get_all_posts_ordered():
+    # Return list of all posts present ordered (dec, inc) by upvotes
+
+    ordering = request.args.get("ordering", "")
+    if not ordering or ordering not in ["dec", "inc"]:
+        # default to decreasing
+        ordering = "dec"
+
+    post_list = list(posts.values())
+    if ordering == "dec":
+        post_list.sort(key=lambda p: (-p["upvotes"], p["id"]))
+    else:
+        post_list.sort(key=lambda p: (p["upvotes"], p["id"]))
+
+    return jsonify({"posts": post_list}), 200
+
+
 # @posts_bp.route("/api/posts/", methods=["POST"])
 @posts_bp.route("/posts/", methods=["POST"])
 def create_post():
